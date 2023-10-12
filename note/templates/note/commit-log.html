@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // 쿠키 이름이 일치하는 경우 값을 얻어냅니다.
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var access_token = getCookie('access_token');
+    var ulCommitLog = document.getElementById('commit-log');
+
+    $('#rollback').click(function() {
+        var selectedVersion = $('input[name="selectedVersion"]:checked').val();
+
+        if(!selectedVersion) {
+            alert('롤백할 버전을 선택하세요.');
+            return; 
+        }
+
+        $.ajax({
+            url: '/note/rollback/' + selectedVersion + '/',
+            type: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + access_token  
+            },
+            success: function(data) {
+                console.log(data);
+                location.reload();
+            }
+        });
+    });
+
+    var note_id = $(".note_id").data("note-id");
+    
+});
+
+    </script>
+</head>
+<body>
+    <div id="container">
+        <ul id="commit-log">
+            {% for version in versions %}
+                <li>
+                    <input type="radio" name="selectedVersion" value="{{ version.id }}">
+                    {{ version.id }} 작성자: {{ version.user }} 커밋날짜: {{ version.created_at }}
+                </li>
+            {% endfor %}
+            </ul>
+        <div class="note_id" style="display:none;">{{ note_id }}</div>
+
+        <button id="rollback">해당 버전으로 롤백하기</button>
+    </div>
+</body>
+</html>

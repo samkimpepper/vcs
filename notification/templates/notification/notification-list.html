@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // 쿠키 이름이 일치하는 경우 값을 얻어냅니다.
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+$(document).ready(function() {
+  var access_token = getCookie('access_token');
+  console.log(access_token);
+
+  $('#delete-read-notifications').click(function() {
+    $.ajax({
+    url: '/notification/delete/read/',
+    type: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer ' + access_token
+    },
+    success: function(data) {
+      location.reload();
+    }
+  });
+  });
+
+  $('#delete-all').click(function() {
+    $.ajax({
+      url: '/notification/delete/all/',
+      type: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + access_token
+      },
+      success: function(data) {
+        location.reload();
+      }
+    });
+  });
+
+  $.ajax({
+    url: '/notification/list/',
+    type: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + access_token
+    },
+    success: function(data) {
+      var notifications = $('#notifications');
+      data.forEach(function(notification) {
+        var textColor = notification.is_read ? 'grey' : 'black';
+
+        var notificationClass = data.notification_type === 'NR' ? 'accept' : 'request';
+        //print(notificationClass);
+
+        notifications.append('<div id="notification" class="' + notificationClass+ '" style="color:' + textColor + '">' + notification.content + ' <p class="note_id" style="display:none;">' 
+          + notification.note + '</p>' + ' <p class="sender" style="display:none;">' + notification.sender + '</p>' +
+          '<p class="notification_id" style="display:none;">' + notification.id + '</p>' +
+        '</div>');
+      });
+    }
+  });
+
+  $('#notifications').on('click', '#notification', function() {
+
+    var textColor = $(this).css('color');
+    console.log("textColor: ", textColor);
+
+    if(textColor == 'rgb(128, 128, 128)') {
+      alert('이미 읽은 알림입니다.');
+      return;
+    }
+
+    if($(this).hasClass('request')) {
+      console.log('request!!');
+      $.ajax({
+      url: '/note/share/accept/',
+      type: 'POST',
+      data: {
+        'note': $(this).find('.note_id').text(),
+        'shared_by': $(this).find('.sender').text()
+      },
+      headers: {
+        'Authorization': 'Bearer ' + access_token
+      },
+      success: function(response) {
+        console.log('알림 클릭 서버 응답: ', response);
+        $(this).css('color', 'grey');
+      },
+      error: function(xhr, textStatus, errorThrown){
+        console.error('error: ', errorThrown);
+      }
+      });
+    }
+
+    
+
+      var notificationId = $(this).find('.notification_id').text();
+      console.log('notification id: ', notificationId);
+
+      $.ajax({
+        url: '/notification/read/' + notificationId + '/',
+        type: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + access_token
+        },
+        success: function(response) {
+          console.log('알림 읽기 서버 응답: ', response);
+          $(this).css('color', 'grey');
+        },
+        error: function(xhr, textStatus, errorThrown){
+          console.error('error: ', errorThrown);
+        }
+      });
+  });
+});
+var access_token = getCookie('access_token');
+console.log('AT', access_token);
+const socket = new WebSocket(`ws://127.0.0.1:8000/ws/notification/?token=${access_token}`);
+
+// WebSocket이 연결되면 실행됩니다.
+socket.addEventListener('open', (event) => {
+  console.log('WebSocket 연결이 열렸습니다.');
+});
+
+// WebSocket으로부터 데이터를 수신하면 실행됩니다.
+socket.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  console.log('서버로부터 데이터 수신:', data);
+  console.log(data.data.content);
+
+  var notifications = $('#notifications');
+  var notificationClass = data.data.notification_type === 'NR' ? 'request' : 'accept';
+  notifications.append('<div id="notification" class="' + notificationClass + '""><p>' + data.data.content + '</p>'
+    +  '<p class="notification_id" style="display:none;">' + notification.id + '</p>' +
+    '</div>');
+  
+});
+
+// WebSocket이 닫히면 실행됩니다.
+socket.addEventListener('close', (event) => {
+  console.log('WebSocket 연결이 닫혔습니다.');
+});
+
+// WebSocket 연결을 닫습니다.
+// socket.close();
+
+// 서버로 데이터를 전송하려면 다음과 같이 사용할 수 있습니다.
+// const dataToSend = { message: 'Hello, server!' };
+// socket.send(JSON.stringify(dataToSend));
+    </script>
+</head>
+<body>
+  <button id="delete-read-notifications">읽은 알림 모두 삭제하기</button>
+  <button id="delete-all">모든 알림 읽고 삭제하기</button>
+    <div id="notifications">
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#notes-view').click(function(event) {
+            $.ajax({
+                type: 'GET',
+                url: '/note/notes-view',
+                headers: {
+                    'Authorization': 'Bearer ' + access_token
+                },
+                success: function(data) {
+                    console.log(data)
+                }
+            })
+        })
+        $('#login_form').submit(function(event) {
+            event.preventDefault();
+
+            var formData = {
+                email: $('#email').val(),
+                password: $('#password').val()
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '/user/login/',
+                data: JSON.stringify(formData),
+                contentType: 'application/json',
+                success: function(data) {
+                    var access_token = data.access_token;
+                    var refresh_token = data.refresh_token;
+
+                    console.log(access_token);
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    console.error(errorThrown);
+                }
+            });
+        });
+    });
+</script>
+<body>
+    <form id="login_form" method="post">
+        {% csrf_token %}
+        <input type="text" id="email" name="email"/>
+        <input type="password" id="password" name="password"/>
+        <button type="submit">로그인</button>
+    </form>
+
+    <a href="{% url 'notification:list-view' %}">알림창 보기</a>
+    <a href="{% url 'note:notes-view' %}" id="notes-view">내 노트 보기</a>
+    <a href="{% url 'user:follow-view' %}">내 친구 보기</a>
+</body>
+</html>

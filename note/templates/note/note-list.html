@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // 쿠키 이름이 일치하는 경우 값을 얻어냅니다.
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+$(document).ready(function() {
+    var access_token = getCookie('access_token');
+
+
+    $('.close').click(function() {
+        var modal = document.getElementById('followingModal');
+        modal.style.display = 'none';
+    });
+    window.onclick = function(event) {
+        var modal = document.getElementById('followingModal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    $.ajax({
+        url: '/note/list/shared',
+        type: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + access_token            
+        },
+        success: function(data) {
+            var notes = $('#shared-notes');
+            data.forEach(function(note) {
+                var noteLink = $('<a>', {
+                    'class': 'note',
+                    'id': note.id,
+                    'href': '/note/detail/' + note.id + '/', // 노트 디테일 페이지의 URL을 동적으로 생성
+                    'text': note.title
+                });
+
+                notes.append(noteLink);
+                notes.append('<br>');
+            });
+        }
+    });
+
+    $.ajax({
+        url: '/note/list/',
+        type: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + access_token
+        },
+        success: function(data) {
+            var notes = $('#notes');
+            data.forEach(function(note) {
+                var noteLink = $('<a>', {
+                    'class': 'note',
+                    'id': note.id,
+                    'href': '/note/detail/' + note.id + '/', // 노트 디테일 페이지의 URL을 동적으로 생성
+                    'text': note.title
+                });
+
+                notes.append(noteLink);
+                notes.append('<button class="share" id="' + note.id + '">공유하기</button>');
+                notes.append('<br>');
+            });
+        }
+    });
+    var modal = document.getElementById('followingModal');
+    modal.style.display = 'block';
+
+    $.ajax({
+        type: 'GET',
+        url: '/user/followings/',
+        headers: {
+            'Authorization': 'Bearer ' + access_token
+        },
+        success: function(data) {
+            var followingList = $('#followingList');
+            followingList.empty();
+            data.forEach(function(user) {
+                followingList.append('<li><input type="radio" name="selectedUser" value="' + user.id + '"/>' + user.username + '</li>');
+                
+            });
+        },
+        error: function(xhr, textStatus, errorThrown){
+            console.error('error: ', errorThrown);
+        }
+    });
+    $(document).on('click', '.share', function(event) {
+        var access_token = getCookie('access_token');
+        var selectedNoteId = $(this).attr('id');
+        var selectedUserId = $('input[name="selectedUser"]:checked').val();
+        console.log('selectedNoteId:',selectedNoteId);
+        console.log('selectedUserId:', [selectedUserId]);
+
+        if(!selectedUserId) {
+            alert('노트 공유할 사용자 선택하셈');
+            return;
+        }
+        var formData = {
+            'note': selectedNoteId,
+            'shared_with': [selectedUserId]
+        };
+
+        $.ajax({
+            type: 'POST',
+            url: '/note/share/',
+            headers: {
+                'Authorization': 'Bearer ' + access_token
+            },
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            success: function(response) {
+                alert('노트 공유 성공!');
+                console.log(response);
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                console.error('Error:' , errorThrown);
+            }
+        });
+    });
+});
+
+
+
+    </script>
+</head>
+<body>
+    <div id="notes">
+
+    </div>
+
+    <div id="followingModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>팔로잉 목록</h2>
+            <ul id="followingList"></ul>
+        </div>
+    </div>
+
+    <div id="shared-notes">
+        <h3>공유 노트</h3>
+
+    </div>
+</body>
+</html>
